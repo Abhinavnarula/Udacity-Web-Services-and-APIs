@@ -19,6 +19,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @RunWith(SpringRunner.class) // use SpringRunner of Junit to run test cases
 @WebMvcTest(PricingController.class) // use WebMvc of Spring Boot Test to test PricingController class
+
+/** 
+ * Unit test on pricing controller.
+ */
 public class UnitTest {
     @Autowired
     private MockMvc mockMvc; // use MockMvc to quickly test MVC Controller without Http Server
@@ -36,7 +40,8 @@ public class UnitTest {
                                                                                            // responses status received
                                                                                            // from Controller class
 
+        Mockito.verify(this.priceService, times(1));
         // verifies the times (1 time) a mock method has been called
-        Mockito.verify(this.priceService, times(1)).getPrice(1L);
+        PricingService.getPrice(1L);
     }
 }
