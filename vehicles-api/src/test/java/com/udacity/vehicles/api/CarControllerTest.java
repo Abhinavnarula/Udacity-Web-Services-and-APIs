@@ -1,14 +1,16 @@
 package com.udacity.vehicles.api;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
+// import static org.hamcrest.Matchers.hasSize;
+// import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+// import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+// import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.udacity.vehicles.client.maps.MapsClient;
@@ -24,12 +26,14 @@ import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.json.AutoConfigureJsonTesters;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,10 +42,13 @@ import org.springframework.test.web.servlet.MockMvc;
  * Implements testing of the CarController class.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @AutoConfigureJsonTesters
 public class CarControllerTest {
+
+    @LocalServerPort
+    private int port;
 
     @Autowired
     private MockMvc mvc;
@@ -72,60 +79,97 @@ public class CarControllerTest {
 
     /**
      * Tests for successful creation of new car in the system
+     * 
      * @throws Exception when car creation fails in the system
      */
     @Test
     public void createCar() throws Exception {
         Car car = getCar();
-        mvc.perform(
-                post(new URI("/cars"))
-                        .content(json.write(car).getJson())
-                        .contentType(MediaType.APPLICATION_JSON_UTF8)
-                        .accept(MediaType.APPLICATION_JSON_UTF8))
-                .andExpect(status().isCreated());
+        mvc.perform(post(new URI("/cars")).content(json.write(car).getJson()).contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)).andExpect(status().isCreated());
     }
 
     /**
      * Tests if the read operation appropriately returns a list of vehicles.
+     * 
      * @throws Exception if the read operation of the vehicle list fails
      */
     @Test
     public void listCars() throws Exception {
         /**
-         * TODO: Add a test to check that the `get` method works by calling
-         *   the whole list of vehicles. This should utilize the car from `getCar()`
-         *   below (the vehicle will be the first in the list).
+         * TODO: Add a test to check that the `get` method works by calling the whole
+         * list of vehicles. This should utilize the car from `getCar()` below (the
+         * vehicle will be the first in the list).
          */
+
+        mvc.perform(get("/cars").accept(MediaType.APPLICATION_JSON).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+        
+        // verify the times the Mock bean of Car Service has been called once:
+        Mockito.verify(this.carService, times(1)).list();
 
     }
 
     /**
      * Tests the read operation for a single car by ID.
+     * 
      * @throws Exception if the read operation for a single car fails
      */
     @Test
     public void findCar() throws Exception {
         /**
-         * TODO: Add a test to check that the `get` method works by calling
-         *   a vehicle by ID. This should utilize the car from `getCar()` below.
+         * TODO: Add a test to check that the `get` method works by calling a vehicle by
+         * ID. This should utilize the car from `getCar()` below.
          */
+
+        this.mvc.perform(
+                get("/cars/1").accept(MediaType.APPLICATION_JSON).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        Mockito.verify(this.carService, times(1)).findById(1L);
     }
 
     /**
      * Tests the deletion of a single car by ID.
+     * 
      * @throws Exception if the delete operation of a vehicle fails
      */
     @Test
     public void deleteCar() throws Exception {
         /**
-         * TODO: Add a test to check whether a vehicle is appropriately deleted
-         *   when the `delete` method is called from the Car Controller. This
-         *   should utilize the car from `getCar()` below.
+         * TODO: Add a test to check whether a vehicle is appropriately deleted when the
+         * `delete` method is called from the Car Controller. This should utilize the
+         * car from `getCar()` below.
          */
+
+        this.mvc.perform(
+                delete("/cars/1").accept(MediaType.APPLICATION_JSON).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(this.carService, times(1)).delete(1L);
+    }
+
+    /**
+     * EXTRA METHOD: Tests the deletion of a single car by ID.
+     * 
+     * @throws Exception if the delete operation of a vehicle fails
+     */
+    @Test
+    public void updateCar() throws Exception {
+        /**
+         * TODO: Check whether a vehicle is updated when the put() method is called from
+         * the Car Controller.This should utilize the car from `getCar()` below.
+         */
+        Car car = getCar(); // initialize a car with updated data
+        this.mvc.perform(put(new URI("/cars/1")) // do PUT request to /cars/{id}
+                .content(json.write(car).getJson()) // use JSON for request body
+                .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
     }
 
     /**
      * Creates an example Car object for use in testing.
+     * 
      * @return an example Car object
      */
     private Car getCar() {
