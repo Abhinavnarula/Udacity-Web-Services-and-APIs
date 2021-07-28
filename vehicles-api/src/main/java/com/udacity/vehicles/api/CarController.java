@@ -12,7 +12,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import javax.validation.Valid;
 
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Link;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,10 +28,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Implements a REST-based controller for the Vehicles API.
+ * Implements a REST-based controller for the Vehicles API. Implements what
+ * happens when GET, POST, PUT and DELETE requests are received (using methods
+ * in the CarService) and how they are responded to (including formatting with
+ * CarResourceAssembler)
  */
 @RestController
 @RequestMapping("/cars")
+@ApiResponses(value = {
+        @ApiResponse(code = 400, message = "This is a bad request. Please follow the API documentation for proper request."),
+        @ApiResponse(code = 401, message = "Due to security constraints, your access request cannot be authorized."),
+        @ApiResponse(code = 500, message = "The server is down. Please make sure that the Price and Maps microservices are running.") })
 class CarController {
 
     private final CarService carService;
@@ -47,8 +57,10 @@ class CarController {
     CollectionModel<EntityModel<Car>> list() {
         List<EntityModel<Car>> resources = carService.list().stream().map(assembler::toModel)
                 .collect(Collectors.toList());
-        return new CollectionModel<>(resources,
+        CollectionModel<EntityModel<Car>> modelCar = CollectionModel.of(resources,
                 linkTo(methodOn(CarController.class).list()).withSelfRel());
+
+        return modelCar;
     }
 
     /**
@@ -63,7 +75,10 @@ class CarController {
          * TODO: Use the `assembler` on that car and return the resulting output.
          *   Update the first line as part of the above implementing.
          */
-        return assembler.toModel(new Car());
+
+        Car car = carService.findById(id);
+
+        return assembler.toModel(car);
     }
 
     /**
@@ -79,8 +94,13 @@ class CarController {
          * TODO: Use the `assembler` on that saved car and return as part of the response.
          *   Update the first line as part of the above implementing.
          */
-        EntityModel<Car> resource = assembler.toModel(new Car());
-        return ResponseEntity.created(new URI(resource.getId().expand().getHref())).body(resource);
+
+        car = carService.save(car);
+        EntityModel<Car> resource = assembler.toModel(car);
+        Link link = Link.of("self");
+        return ResponseEntity.created(new URI(resource.getLink("self").orElse(link).getHref())).body(resource);
+        
+        // return ResponseEntity.created(new URI(resource.getId().expand().getHref())).body(resource);
     }
 
     /**
@@ -97,7 +117,12 @@ class CarController {
          * TODO: Use the `assembler` on that updated car and return as part of the response.
          *   Update the first line as part of the above implementing.
          */
-        EntityModel<Car> resource = assembler.toModel(new Car());
+
+        car.setId(id);
+
+        carService.save(car);
+
+        EntityModel<Car> resource = assembler.toModel(car);
         return ResponseEntity.ok(resource);
     }
 
@@ -111,6 +136,9 @@ class CarController {
         /**
          * TODO: Use the Car Service to delete the requested vehicle.
          */
+
+        carService.delete(id);
+
         return ResponseEntity.noContent().build();
     }
 }
